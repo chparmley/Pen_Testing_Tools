@@ -25,13 +25,13 @@ class return_fire():
         self.passwords = {"field":"password", "file":'./wordlist/rockyou.txt', "encoding":"ISO-8859-1", "payload":self.password_list}
         self.master_dictionary=[self.first_names, self.last_names, self.email_extensions, self.passwords]
         
-        self.url = 'https://diaztreeandlawnservice.com/4333/log.php'
+        self.url = 'https://{redacted}/4333/log.php'
 
         self.headers = {
             "Accept-Encoding": "gzip,deflate,br",
             "Connection": "keep-alive",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Host": "diaztreeandlawnservice.com",
+            "Host": "{redacted}.com",
             "Origin": "https://copper-diagnostic-pony.glitch.me",
             "Refer": "https://copper-diagnostic-pony.glitch.me",
             "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.52 Safari/536.5",
