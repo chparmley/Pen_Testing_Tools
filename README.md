@@ -1,6 +1,7 @@
-# API Poisoning & DOS
-This repository contains data collection against an attempted phishing attack.
------------------------------------------------------------------------------
+# API Poisoning
+
+Theoritical scenario in which it may be necessary to disrupt data collection of an on going phishing attempt
+------------------------------------------------------------------------------------------------------------
 
 request_spammer.py
 ------------------
