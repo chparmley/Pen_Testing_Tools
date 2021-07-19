@@ -243,7 +243,7 @@ class Payloads():
     @clear
     def port(self):
         global port_number
-        port_number = input('Enter PORT:  ')
+        port_number = input('Enter connection PORT:  ')
 
     @clear
     def command_constructor(self):
